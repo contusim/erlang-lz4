@@ -20,15 +20,20 @@ nif_stub_error(Line) ->
     erlang:nif_error({nif_not_loaded,module,?MODULE,line,Line}).
 
 init() ->
-    PrivDir = case code:priv_dir(?MODULE) of
-                  {error, bad_name} ->
-                      EbinDir = filename:dirname(code:which(?MODULE)),
-                      AppPath = filename:dirname(EbinDir),
-                      filename:join(AppPath, "priv");
-                  Path ->
-                      Path
-              end,
-    erlang:load_nif(filename:join(PrivDir, lz4_nif), 0).
+    load_nif(get_so_path()).
+load_nif(LibDir) ->
+    SOPath = filename:join(LibDir, "lz4_nif"),
+    case catch erlang:load_nif(SOPath, 0) of
+        ok ->
+            ok;
+        Err ->
+            error_logger:warning_msg("unable to load lz4_nif NIF: ~p~n", [Err]),
+            Err
+    end.    
+get_so_path() ->
+    EbinDir = filename:dirname(code:which(?MODULE)),
+    AppDir = filename:dirname(EbinDir),
+    filename:join([AppDir, "priv", "lib"]).
 
 %% @doc Equals `compress(Binary, [])'.
 %% @see compress/2
